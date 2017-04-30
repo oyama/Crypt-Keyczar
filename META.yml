@@ -1,7 +1,7 @@
 ---
 abstract: 'Keyczar is an open source cryptographic toolkit '
 author:
-  - '小山浩之 <oyama@mixi.co.jp>'
+  - '小山浩之 <oyama@module.jp>'
 build_requires:
   ExtUtils::MakeMaker: 0
 configure_requires:
@@ -20,4 +20,4 @@ no_index:
 requires:
   JSON: 0
   MIME::Base64: 0
-version: 0.08
+version: 0.09

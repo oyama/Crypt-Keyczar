@@ -20,6 +20,7 @@ new(class, modulus, publicExponent, privateExponent, primeP, primeQ, primeExpone
 	    int rc;
 	    STRLEN l;
 	    unsigned char *in;
+	    BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
 
 	    PERL_UNUSED_VAR(class);
 	    if ((rsa = RSA_new()) == NULL) {
@@ -28,62 +29,76 @@ new(class, modulus, publicExponent, privateExponent, primeP, primeQ, primeExpone
 	    }
 
 	    in = (unsigned char *)SvPV(modulus, l);
-	    rsa->n = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->n == NULL) {
+	    n = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (n == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(publicExponent, l);
-	    rsa->e = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->e == NULL) {
+	    e = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (e == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(privateExponent, l);
-	    rsa->d = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->d == NULL) {
+	    d = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (d == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(primeP, l);
-	    rsa->p = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->p == NULL) {
+	    p = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (p == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(primeQ, l);
-	    rsa->q = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->q == NULL) {
+	    q = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (q == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(primeExponentP, l);
-	    rsa->dmp1 = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->dmp1 == NULL) {
+	    dmp1 = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (dmp1 == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(primeExponentQ, l);
-	    rsa->dmq1 = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->dmq1 == NULL) {
+	    dmq1 = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (dmq1 == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(crtCoefficient, l);
-	    rsa->iqmp = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->iqmp == NULL) {
+	    iqmp = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (iqmp == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
-
+	    if (RSA_set0_key(rsa, n, e, d) == 0) {
+	        RSA_free(rsa);
+	        crypt__keyczar__util__croak_openssl();
+	        /* NOTREACHED */
+	    }
+	    if (RSA_set0_factors(rsa, p, q) == 0) {
+	        RSA_free(rsa);
+	        crypt__keyczar__util__croak_openssl();
+	        /* NOTREACHED */
+	    }
+	    if (RSA_set0_crt_params(rsa, dmp1, dmq1, iqmp) == 0) {
+	        RSA_free(rsa);
+	        crypt__keyczar__util__croak_openssl();
+	        /* NOTREACHED */
+	    }
 	    rc = RSA_check_key(rsa);
 	    if (rc == 0) {
 	        RSA_free(rsa);
@@ -163,48 +178,58 @@ generate(class, size)
 	CODE:
 	{
 	    RSA *rsa;
+	    BIGNUM *e, *n, *ee, *d, *p, *q, *dmp1, *dmq1, *iqmp;
 
 	    PERL_UNUSED_VAR(class);
-	    rsa = RSA_generate_key(size, RSA_F4, NULL, NULL);
-	    if (rsa == NULL) {
+
+	    e = BN_new();
+	    BN_set_word(e, RSA_F4);
+	    rsa = RSA_new();
+	    if (RSA_generate_key_ex(rsa, size, e, NULL) == 0) {
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 
+	    RSA_get0_key(rsa, (const BIGNUM **)&n, (const BIGNUM **)&ee, (const BIGNUM **)&d);
 	    RETVAL = newHV();
-	    if (crypt__keyczar__util__bignum2hv(rsa->n, "modulus", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(n, "modulus", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'modulus' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->e, "publicExponent", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(ee, "publicExponent", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'publicExponent' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->d, "privateExponent", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(d, "privateExponent", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'privateExponent' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->p, "primeP", RETVAL) == 0) {
+
+	    RSA_get0_factors(rsa, (const BIGNUM **)&p, (const BIGNUM **)&q);
+	    if (crypt__keyczar__util__bignum2hv(p, "primeP", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'primeP' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->q, "primeQ", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(q, "primeQ", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'primeQ' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->dmp1, "primeExponentP", RETVAL) == 0) {
+
+	    RSA_get0_crt_params(rsa, (const BIGNUM **)&dmp1, (const BIGNUM **)&dmq1, (const BIGNUM **)&iqmp);
+	    if (crypt__keyczar__util__bignum2hv(dmp1, "primeExponentP", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'primeExponentP' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->dmq1, "primeExponentQ", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(dmq1, "primeExponentQ", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'primeExponentQ' fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(rsa->iqmp, "crtCoefficient", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(iqmp, "crtCoefficient", RETVAL) == 0) {
 	        RSA_free(rsa);
 	        croak("cannot generate RSA key: set 'crtCoefficient' fail");
 	    }
 	    RSA_free(rsa);
+	    BN_free(e);
 	}
 	OUTPUT:
 	    RETVAL
