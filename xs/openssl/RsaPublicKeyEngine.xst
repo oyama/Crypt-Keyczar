@@ -13,6 +13,7 @@ new(class, modulus, publicExponent)
 	    RSA *rsa;
 	    STRLEN l;
 	    unsigned char *in;
+	    BIGNUM *e, *n;
 
 	    PERL_UNUSED_VAR(class);
 	    if ((rsa = RSA_new()) == NULL) {
@@ -20,15 +21,20 @@ new(class, modulus, publicExponent)
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(modulus, l);
-	    rsa->n = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->n == NULL) {
+	    n = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (n == NULL) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(publicExponent, l);
-	    rsa->e = BN_bin2bn((const unsigned char *)in, l, NULL);
-            if (rsa->e == NULL) {
+	    e = BN_bin2bn((const unsigned char *)in, l, NULL);
+            if (e == NULL) {
+	        RSA_free(rsa);
+	        crypt__keyczar__util__croak_openssl();
+	        /* NOTREACHED */
+	    }
+	    if (RSA_set0_key(rsa, n, e, NULL) == 0) {
 	        RSA_free(rsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */

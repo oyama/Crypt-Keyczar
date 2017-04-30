@@ -15,6 +15,7 @@ new(class, x, y, p, q, g)
 	    DSA *dsa;
 	    STRLEN l;
 	    unsigned char *in;
+	    BIGNUM *bp, *bq, *bg, *pub_key, *priv_key;
 
 	    PERL_UNUSED_VAR(class);
 
@@ -23,40 +24,43 @@ new(class, x, y, p, q, g)
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(p, l);
-	    dsa->p = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->p == NULL) {
+	    bp = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (bp == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(q, l);
-	    dsa->q = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->q == NULL) {
+	    bq = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (bq == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(g, l);
-	    dsa->g = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->g == NULL) {
+	    bg = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (bg == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
+	    DSA_set0_pqg(dsa, bp, bq, bg);
+
 	    in = (unsigned char *)SvPV(y, l);
-	    dsa->pub_key = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->pub_key == NULL) {
+	    pub_key = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (pub_key == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(x, l);
-	    dsa->priv_key = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->priv_key == NULL) {
+	    priv_key = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (priv_key == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
+	    DSA_set0_key(dsa, pub_key, priv_key);
 
 	    Newz(0, RETVAL, 1, struct Crypt__Keyczar__DsaPrivateKeyEngine_class);
 	    RETVAL->dsa = dsa;
@@ -99,9 +103,12 @@ generate(class, size)
 	CODE:
 	{
 	    DSA *dsa;
+	    BIGNUM *p, *q, *g, *pub_key, *priv_key;
 
 	    PERL_UNUSED_VAR(class);
-	    dsa = DSA_generate_parameters(size, NULL, 0, NULL, NULL, NULL, NULL);
+
+	    dsa = DSA_new();
+	    DSA_generate_parameters_ex(dsa, size, NULL, 0, NULL, NULL, NULL);
 	    if (dsa == NULL) {
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
@@ -113,25 +120,27 @@ generate(class, size)
 	    }
 
 	    RETVAL = newHV();
-	    if (crypt__keyczar__util__bignum2hv(dsa->p, "p", RETVAL) == 0) {
+	    DSA_get0_pqg((const DSA *)dsa, (const BIGNUM **)&p, (const BIGNUM **)&q, (const BIGNUM **)&g);
+	    if (crypt__keyczar__util__bignum2hv(p, "p", RETVAL) == 0) {
 	        DSA_free(dsa);
-	        croak("cannot generate DSA key: bignum2hv(dsa->p) fail");
+	        croak("cannot generate DSA key: bignum2hv(p) fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(dsa->q, "q", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(q, "q", RETVAL) == 0) {
 	        DSA_free(dsa);
-	        croak("cannot generate DSA key: bignum2hv(dsa->q) fail");
+	        croak("cannot generate DSA key: bignum2hv(q) fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(dsa->g, "g", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(g, "g", RETVAL) == 0) {
 	        DSA_free(dsa);
-	        croak("cannot generate DSA key: bignum2hv(dsa->g) fail");
+	        croak("cannot generate DSA key: bignum2hv(g) fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(dsa->pub_key, "y", RETVAL) == 0) {
+	    DSA_get0_key((const DSA *)dsa, (const BIGNUM **)&pub_key, (const BIGNUM **)&priv_key);
+	    if (crypt__keyczar__util__bignum2hv(pub_key, "y", RETVAL) == 0) {
 	        DSA_free(dsa);
-	        croak("cannot generate DSA key: bignum2hv(dsa->pub_key) fail");
+	        croak("cannot generate DSA key: bignum2hv(pub_key) fail");
 	    }
-	    if (crypt__keyczar__util__bignum2hv(dsa->priv_key, "x", RETVAL) == 0) {
+	    if (crypt__keyczar__util__bignum2hv(priv_key, "x", RETVAL) == 0) {
 	        DSA_free(dsa);
-	        croak("cannot generate DSA key: bignum2hv(dsa->priv_key) fail");
+	        croak("cannot generate DSA key: bignum2hv(priv_key) fail");
 	    }
 
 	    DSA_free(dsa);

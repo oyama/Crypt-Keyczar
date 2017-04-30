@@ -15,6 +15,7 @@ new(class, y, p, q, g)
 	    DSA *dsa;
 	    STRLEN l;
 	    unsigned char *in;
+	    BIGNUM *bp, *bq, *bg, *pub_key;
 
 	    PERL_UNUSED_VAR(class);
 
@@ -23,33 +24,36 @@ new(class, y, p, q, g)
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(p, l);
-	    dsa->p = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->p == NULL) {
+	    bp = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (bp == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(q, l);
-	    dsa->q = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->q == NULL) {
+	    bq = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (bq == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
 	    in = (unsigned char *)SvPV(g, l);
-	    dsa->g = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->g == NULL) {
+	    bg = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (bg == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
+	    DSA_set0_pqg(dsa, bp, bq, bg);
+
 	    in = (unsigned char *)SvPV(y, l);
-	    dsa->pub_key = BN_bin2bn((const unsigned char *)in, l, NULL);
-	    if (dsa->pub_key == NULL) {
+	    pub_key = BN_bin2bn((const unsigned char *)in, l, NULL);
+	    if (pub_key == NULL) {
 	        DSA_free(dsa);
 	        crypt__keyczar__util__croak_openssl();
 	        /* NOTREACHED */
 	    }
+	    DSA_set0_key(dsa, pub_key, NULL);
 
 	    Newz(0, RETVAL, 1, struct Crypt__Keyczar__DsaPublicKeyEngine_class);
 	    RETVAL->dsa = dsa;

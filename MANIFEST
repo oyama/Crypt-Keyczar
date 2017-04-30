@@ -91,9 +91,11 @@ t/compat-java/TestDecrypt.java
 t/compat-java/TestEncrypt.java
 t/compat-java/TestSign.java
 t/compat-java/TestVerify.java
+t/build-platform.sh
 TODO
 typemap
 xs/openssl.h
+xs/openssl/compat.h
 xs/openssl/AesEngine.xst
 xs/openssl/DsaPrivateKeyEngine.xst
 xs/openssl/DsaPublicKeyEngine.xst

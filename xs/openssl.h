@@ -13,7 +13,8 @@
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
 #include <openssl/bn.h>
-
+#include <openssl/engine.h>
+#include "openssl/compat.h"
 
 
 typedef struct Crypt__Keyczar__AesEngine_class {

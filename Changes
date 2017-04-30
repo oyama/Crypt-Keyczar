@@ -1,3 +1,6 @@
+0.09	Sun Apr 30 22:40:17 JST 2017
+	- support openssl 1.1.0, 1.0.2, 1.0.1, 0.9.8.
+
 0.08	Tue Oct  8 15:35:42 JST 2013
 	- remove illegal characters in metadata.
 

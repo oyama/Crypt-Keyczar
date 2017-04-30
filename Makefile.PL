@@ -11,16 +11,17 @@ my %option = (
     PREREQ_PM => {
         'JSON' => 0.0, # 1.xx or 2.xx
         'MIME::Base64' => 0.0,
+        'Test::Simple' => 0.0,
     },
     LIBS => [], # -lcrypto or other
     EXE_FILES => [ 'bin/keyczar' ],
     ($] >= 5.005 ?
         (ABSTRACT_FROM => 'lib/Crypt/Keyczar.pm',
-         AUTHOR => '小山浩之 <oyama@mixi.co.jp>') : ()),
+         AUTHOR => '小山浩之 <oyama@module.jp>') : ()),
 );
 
 if ($WITH_OPENSSL) {
-    $option{LIBS} = [ "-L$ENV{OPENSSL_PREFIX}/lib", '-lcrypto' ];
+    $option{LIBS} = [ "-lcrypto -L$ENV{OPENSSL_PREFIX}/lib" ];
     $option{INC}  = "-I$ENV{OPENSSL_PREFIX}/include";
     $option{depend} = { 'Keyczar.c' => "Keyczar.xs xs/openssl.h xs/openssl/*.xst" };
 #    has_openssl_sha2();

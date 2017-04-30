@@ -15,6 +15,9 @@ new(class, type, key)
 	    const EVP_MD *md;
 	    PERL_UNUSED_VAR(class);
 
+	    ENGINE_load_builtin_engines();
+	    ENGINE_register_all_complete();
+
 	    if (strcasecmp(type, "SHA1") == 0) {
                 md = EVP_sha1();
             }
@@ -35,11 +38,10 @@ new(class, type, key)
 	    }
 
 	    Newz(0, RETVAL, 1, struct Crypt__Keyczar__HmacEngine_class);
-	    Newz(0, RETVAL->context, 1, HMAC_CTX);
+	    RETVAL->context = HMAC_CTX_new();
 
-	    HMAC_CTX_init(RETVAL->context);
 	    k = (unsigned char *)SvPV(key, l);
-            HMAC_Init(RETVAL->context, k, l, md);
+            HMAC_Init_ex(RETVAL->context, k, l, md, NULL);
 	}
 	OUTPUT:
 	    RETVAL
@@ -51,8 +53,7 @@ DESTROY(self)
 	CODE:
 	{
 	    if (self->context != NULL) {
-	        HMAC_CTX_cleanup(self->context);
-	        Safefree(self->context);
+	        HMAC_CTX_free(self->context);
                 self->context = NULL;
 	    }
 	    Safefree(self);
@@ -65,7 +66,7 @@ digest_size(self)
 	Crypt::Keyczar::HmacEngine self
 	CODE:
 	{
-	    RETVAL = EVP_MD_size(self->context->md);
+	    RETVAL = EVP_MD_size(EVP_MD_CTX_md((const EVP_MD_CTX *)self->context));
 	}
 	OUTPUT:
 	    RETVAL
@@ -116,7 +117,7 @@ verify(self, mac)
 	    unsigned char *in;
 
 	    in = (unsigned char *)SvPV(mac, in_l);
-	    if (in_l != EVP_MD_size(self->context->md)) {
+	    if (in_l != EVP_MD_size(EVP_MD_CTX_md((const EVP_MD_CTX *)self->context))) {
 	        RETVAL = 0;
 	    }
 	    else {
